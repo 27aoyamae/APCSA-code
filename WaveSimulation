@@ -1,0 +1,263 @@
+class WaveSimulation {
+
+  int cols, rows;    //number of grid cells(how many points wave exsis on)
+  int resolution;    //how big each cell is on screen: scaling factor
+
+  float[][] current;  //current state of wave
+  float[][] previous; //what it looked like last frame
+  float[][] next;   //what we are calculating for the enxt freame
+
+  // physics parameters borrowed form equaiton. 
+  float waveSpeed = 0.2;
+  float damping = 0.99;
+  float disturbanceMagnitude = 200;
+  float timeScale = 1;
+
+  // this decides which direction we are viewing the wave from. 
+  int viewMode = 0;
+  // 0 = top(row)
+  // 1 = bottom(row reversed)
+  // 2 = left(column)
+  // 3 = right(column reversed)
+
+  WaveSimulation(int resolution) {
+    this.resolution = resolution;
+    initializeGrid();
+  }
+
+//convert screen size into grid size
+  void initializeGrid() {
+    cols = width / resolution;
+    rows = height / resolution;
+
+//create all arrays(start at 0 = no waves)
+    current = new float[cols][rows];
+    previous = new float[cols][rows];
+    next = new float[cols][rows];
+  }
+
+  void update() {
+    //this basically updates the frames so the animation/simulation moves.(based on timescale)
+
+    for (int t = 0; t < timeScale; t++) {
+      step();
+    }
+  }
+
+  void step() {
+    //this is the core of teh simulation. It updates the wev one "time step" forward, and
+    //each cell looks at its neighbors and uses that to figure out how ti should move. 
+    //wves depend on the previous state, stored as "previous[][]
+
+    for (int i = 1; i < cols - 1; i++) {
+      for (int j = 1; j < rows - 1; j++) {
+
+        float neighbors =
+          current[i+1][j] +
+          current[i-1][j] +
+          current[i][j+1] +
+          current[i][j-1];
+
+        float value =
+          (2 * current[i][j]) //keeps motion going forward
+          - previous[i][j]     //pulls it back(creates wave bounce)
+          + waveSpeed * (neighbors - 4 * current[i][j]);//spreds energy outward
+
+        value *= damping;//slowlt removes energy so waves fade insteaad of lasting forever. (like a real ripple)
+
+        next[i][j] = value;
+      }
+    }
+
+    swapBuffers(); //shift everyting forward in time
+  }
+
+  void swapBuffers() {//this shifts everything forward in time without copying arrays(base on current, previous and next
+    float[][] temp = previous;
+    previous = current;
+    current = next;
+    next = temp;
+  }
+
+  void render() {
+//makes data visible by converting grid values to colors on screen, in which orange = high point, blue = low point. 
+    noStroke();
+
+    for (int i = 0; i < cols; i++) {
+      for (int j = 0; j < rows; j++) {
+
+        float v = current[i][j];
+
+        float c = map(v, -100, 100, 0, 255);
+        c = constrain(c, 0, 255);
+
+        fill(c, 120, 255 - c);
+
+        rect(i * resolution, j * resolution,
+             resolution, resolution);
+      }
+    }
+//THIS SECTION DRAWS THE SIDE PANEL(wave slice observed from different angle
+//turns wave height into an evolving line graph(had ai help on this)
+
+    int panelW = 200;
+    int panelH = 120;
+
+    pushMatrix();
+
+    translate(width - 220, 20);
+
+    fill(0, 180);
+    stroke(255);
+    rect(0, 0, panelW, panelH);
+
+    fill(255);
+    textAlign(LEFT);
+
+    String label = "";
+    if (viewMode == 0) label = "TOP VIEW (ROW)";
+    if (viewMode == 1) label = "BOTTOM VIEW (ROW REVERSED)";
+    if (viewMode == 2) label = "LEFT VIEW (COLUMN)";
+    if (viewMode == 3) label = "RIGHT VIEW (COLUMN REVERSED)";
+
+    text(label, 5, 15);
+
+    stroke(80);
+    line(0, panelH/2, panelW, panelH/2);
+
+    noFill();
+    stroke(0, 255, 255);
+
+    beginShape();///depending on the mode we can scan a row or a column
+
+    if (viewMode == 0) {
+
+      int row = rows / 2;
+
+      for (int i = 0; i < cols; i++) {
+
+        float v = current[i][row];
+
+        float x = map(i, 0, cols - 1, 0, panelW);
+        float y = map(v, -100, 100, panelH, 0);
+
+        vertex(x, y);
+      }
+
+    } else if (viewMode == 1) {
+
+      int row = rows / 2;
+
+      for (int i = cols - 1; i >= 0; i--) {
+
+        float v = current[i][row];
+
+        float x = map(i, 0, cols - 1, 0, panelW);
+        float y = map(v, -100, 100, panelH, 0);
+
+        vertex(x, y);
+      }
+
+    } else if (viewMode == 2) {
+
+      int col = cols / 2;
+
+      for (int j = 0; j < rows; j++) {
+
+        float v = current[col][j];
+
+        float x = map(j, 0, rows - 1, 0, panelW);
+        float y = map(v, -100, 100, panelH, 0);
+
+        vertex(x, y);
+      }
+
+    } else if (viewMode == 3) {
+
+      int col = cols / 2;
+
+      for (int j = rows - 1; j >= 0; j--) {
+
+        float v = current[col][j];
+
+        float x = map(j, 0, rows - 1, 0, panelW);
+        float y = map(v, -100, 100, panelH, 0);
+
+        vertex(x, y);
+      }
+    }
+
+    endShape();
+
+    popMatrix();
+
+    fill(255);
+    textAlign(CENTER, CENTER);//These are UI lables to know which direction you are obserivng from 
+
+    if (viewMode == 0) fill(0, 255, 255); else fill(255);
+    text("TOP", width/2, 15);
+
+    if (viewMode == 1) fill(0, 255, 255); else fill(255);
+    text("BOTTOM", width/2, height - 15);
+
+    if (viewMode == 2) fill(0, 255, 255); else fill(255);
+    text("LEFT", 25, height/2);
+
+    if (viewMode == 3) fill(0, 255, 255); else fill(255);
+    text("RIGHT", width - 30, height/2);
+  }
+
+  void inject(float mx, float my) {
+
+    int i = (int)(mx / resolution);
+    int j = (int)(my / resolution);
+
+    if (i > 0 && i < cols - 1 && j > 0 && j < rows - 1) {
+      current[i][j] = disturbanceMagnitude;
+    }
+  }
+//changing reslution rebuilds the entire grid, where bigger resolution = fewer cells and smalelr reslution = more detail. 
+  void setResolution(int newRes) {
+    resolution = newRes;
+    initializeGrid();
+    reset();//clears old wfe data so i doesnt glitch. 
+  }
+
+  void handleViewClick(float mx, float my) {
+    //checks if user clicked on scrreen & switches viewing direction accodingl. each region corresponds to different slice of the wave
+
+    int w = width;
+    int h = height;
+
+    if (mx > w/2 - 40 && mx < w/2 + 40 && my < 30) {
+      viewMode = 0;
+    }
+
+    if (mx > w/2 - 50 && mx < w/2 + 50 && my > h - 30) {
+      viewMode = 1;
+    }
+
+    if (my > h/2 - 40 && my < h/2 + 40 && mx < 30) {
+      viewMode = 2;
+    }
+
+    if (my > h/2 - 40 && my < h/2 + 40 && mx > w - 30) {
+      viewMode = 3;
+    }
+  }
+
+//reset feature 
+//all waves go back to 0 so everything is flat again(thus no color on screen). 
+
+  void reset() {
+
+    for (int i = 0; i < cols; i++) {
+      for (int j = 0; j < rows; j++) {
+
+        current[i][j] = 0;
+        previous[i][j] = 0;
+        next[i][j] = 0;
+      }
+    }
+  }
+}
