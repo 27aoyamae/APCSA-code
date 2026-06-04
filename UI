@@ -1,0 +1,71 @@
+class UI {
+
+  WaveSimulation sim;
+
+  Slider waveSpeed;
+  Slider damping;
+  Slider magnitude;
+  Slider timeScale;
+  Slider resolution;
+
+  UI(WaveSimulation sim) {
+    //connects UI to the simulation so sliders can directly control the wave behavior
+    this.sim = sim;
+//each slider contorls one parameter of the wave
+    waveSpeed = new Slider(50, 50, 200, 0.0, 0.5, sim.waveSpeed);
+    damping = new Slider(50, 90, 200, 0.90, 1.0, sim.damping);
+    magnitude = new Slider(50, 130, 200, 50, 400, sim.disturbanceMagnitude);
+    timeScale = new Slider(50, 170, 200, 1, 5, sim.timeScale);
+    resolution = new Slider(50, 210, 200, 5, 20, sim.resolution);
+  }
+
+  void update() {//updates all sliders(handles draging + value changes)
+
+    waveSpeed.update();
+    damping.update();
+    magnitude.update();
+    timeScale.update();
+    resolution.update();
+
+    //push slider values into the simulation(without this sliders will just be decorative)
+    sim.waveSpeed = waveSpeed.value;
+    sim.damping = damping.value;
+    sim.disturbanceMagnitude = magnitude.value;
+    sim.timeScale = timeScale.value;
+
+    // resolution change requires rebuild
+    int newRes = int(resolution.value);
+    if (newRes != sim.resolution) {
+      sim.setResolution(newRes);
+    }
+  }
+
+  void render() {
+//draws all sliders +their lables on screen. 
+    waveSpeed.render("Wave Speed");
+    damping.render("Damping");
+    magnitude.render("Strength");
+    timeScale.render("Time Scale");
+    resolution.render("Resolution");
+  }
+
+  void mousePressed() {//tells sliders when user starts interacting
+    waveSpeed.pressed();
+    damping.pressed();
+    magnitude.pressed();
+    timeScale.pressed();
+    resolution.pressed();
+  }
+
+  void mouseDragged() {
+    // handled inside sliders
+  }
+
+  void mouseReleased() {//tells sliders interaction is done(mouse released)
+    waveSpeed.released();
+    damping.released();
+    magnitude.released();
+    timeScale.released();
+    resolution.released();
+  }
+}
