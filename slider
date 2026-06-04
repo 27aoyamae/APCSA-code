@@ -1,0 +1,65 @@
+class Slider {
+
+  float x, y, w;
+  float minVal, maxVal;
+  float value;
+
+  boolean dragging = false;
+
+  Slider(float x, float y, float w, float minVal, float maxVal, float startVal) {
+
+    // stores position, size, and range of slider
+
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.minVal = minVal;
+    this.maxVal = maxVal;
+    this.value = startVal;
+  }
+
+  void update() {
+
+    //if slider is being dragged, update its value based on mouse position
+
+    if (dragging) {
+      float mx = constrain(mouseX, x, x + w); // keeps it inside slider bounds
+      float t = (mx - x) / w;                 // converts position to 0–1 range
+      value = lerp(minVal, maxVal, t);        // maps to actual value
+    }
+  }
+
+  void render(String label) {
+
+    // draws slider line, knob, and label
+    // The knob  position reflects the current value(ai helped)
+
+    stroke(255);
+    line(x, y, x + w, y);
+
+    float t = map(value, minVal, maxVal, 0, 1);
+    float px = x + t * w; // position of the knob
+
+    fill(255);
+    circle(px, y, 10);
+
+    fill(255);
+    text(label + ": " + nf(value, 1, 2), x, y - 10);
+  }
+
+  void pressed() {
+
+    // checks if mouse clicked close enough to the knob
+
+    if (dist(mouseX, mouseY, x + map(value, minVal, maxVal, 0, w), y) < 10) {
+      dragging = true;
+    }
+  }
+
+  void released() {
+
+    //stops draging when mouse is released.
+
+    dragging = false;
+  }
+}
