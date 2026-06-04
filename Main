@@ -1,0 +1,141 @@
+WaveSimulation sim;
+UI ui;
+
+void setup() {
+
+  // sets up the window and initializes the simulation + ui objects. 
+  //simulation handles all wave physics, UI controls paramters. 
+
+  size(800, 800);
+
+  sim = new WaveSimulation(10);
+  ui = new UI(sim);
+}
+
+void draw() {
+
+  // main loop: updates physics first, then draws everything,  then finally UI. 
+  //order is important so UI doesnt get overwritten by the simulation rendering. 
+
+  background(0);
+
+  sim.update();
+  sim.render();
+
+  ui.update();
+  ui.render();
+
+  drawResetButton();
+  drawColorLegend(); 
+}
+
+void mousePressed() {
+
+ //handles clicks in priority order:
+ //WHY? because if not included unwanted waves can be created while pressing buttons/sliders. 
+//priority: reset button, UI elements, inject waves.
+  if (mouseX > 45 && mouseX < 125 && mouseY > 245 && mouseY < 275) {
+    sim.reset();
+    return; // stop so it doesn’t also inject a wave
+  }
+
+  if (isOverUI(mouseX, mouseY)) {
+    sim.handleViewClick(mouseX, mouseY); // camera/view logic
+    ui.mousePressed();
+    return;
+  }
+
+  sim.inject(mouseX, mouseY); // adds energy to grid
+  sim.handleViewClick(mouseX, mouseY);
+  ui.mousePressed();
+}
+
+void mouseDragged() {
+
+  // dragging wither moves sliders OR continuously injects waves(but not at the same time)
+
+  if (isOverUI(mouseX, mouseY)) {
+    ui.mouseDragged();
+    return;
+  }
+
+  sim.inject(mouseX, mouseY);
+  ui.mouseDragged();
+}
+
+void mouseReleased() {
+
+  //ends any slider dragging. 
+
+  ui.mouseReleased();
+}
+//return value visuals
+
+void drawResetButton() {
+
+  int x = 45;
+  int y = 245;
+  int w = 80;
+  int h = 30;
+
+  boolean hover = (mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h);
+
+  noFill();
+  stroke(hover ? 255 : 140); // highlight on hover(ai help)
+  rect(x, y, w, h);
+
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(12);
+  text("RESET", x + w/2, y + h/2);
+}
+
+boolean isOverUI(int mx, int my) {
+
+  // prevents waves form being injected when interacting with UI elemetns. 
+
+  if (mx > 700 && mx < 800 && my > 180 && my < 330) return true; // legend
+  if (mx > 45 && mx < 125 && my > 245 && my < 275) return true;  // reset button
+
+  if (my < 30 || my > height - 30) return true; // top/bottom labels
+  if (mx < 30 || mx > width - 30) return true;  // side labels
+
+  if (mx < 300 && my < 290) return true; // slider region
+
+  return false;
+}
+
+//this draws the color spectrum, making it clear which colors mean what. 
+
+void drawColorLegend() {
+
+  //shows peaks and troughs and what color they are represetned by 
+
+  int x = 700;
+  int y = 180;
+  int w = 20;
+  int h = 150;
+
+  stroke(255); 
+
+  for (int i = 0; i < h; i++) {
+    float v = map(i, 0, h, 100, -100); // top = high, bottom = low
+    
+    float c = map(v, -100, 100, 0, 255);
+    c = constrain(c, 0, 255);
+    
+    stroke(c, 120, 255 - c); // color gradient
+    line(x, y + i, x + w, y + i);
+  }
+
+  noFill();
+  stroke(255);
+  rect(x, y, w, h);
+
+  fill(255);
+  textAlign(LEFT, CENTER);
+  textSize(12);
+  text("+100 (Peak)", x + w + 8, y);
+  text("0 (Flat)", x + w + 8, y + h/2);
+  text("-100 (Trough)", x + w + 8, y + h);
+}
